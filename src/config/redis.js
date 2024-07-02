@@ -1,8 +1,10 @@
 const redis = require('redis');
+require('dotenv').config();
 
 const client = redis.createClient({
-    host: 'localhost', // Adjust if Redis is hosted elsewhere
-    port: 6379
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT,
+    password: process.env.REDIS_PASSWORD
 });
 
 client.on('connect', () => {
@@ -14,3 +16,5 @@ client.on('error', (err) => {
 });
 
 module.exports = client;
+
+ 

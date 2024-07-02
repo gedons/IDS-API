@@ -37,7 +37,7 @@ require('./src/config/passport')(passport);
 // Redis session store
 app.use(session({
   store: new RedisStore({ client: redisClient }),
-  secret:  process.env.REDIS_SECRET ,
+  secret: process.env.SESSION_SECRET,  
   resave: false,
   saveUninitialized: false
 }));
