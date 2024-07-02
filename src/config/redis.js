@@ -2,9 +2,11 @@ const redis = require('redis');
 require('dotenv').config();
 
 const client = redis.createClient({
-    host: process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT,
-    password: process.env.REDIS_PASSWORD
+    url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+    password: process.env.REDIS_PASSWORD,
+    socket: {
+        connectTimeout: 50000 // Set the connection timeout to 50 seconds (or higher if needed)
+    }
 });
 
 client.on('connect', () => {
@@ -14,6 +16,8 @@ client.on('connect', () => {
 client.on('error', (err) => {
     console.error('Redis error: ', err);
 });
+
+client.connect().catch(console.error);  
 
 module.exports = client;
 

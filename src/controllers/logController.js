@@ -1,4 +1,7 @@
 const Log = require('../models/Log');
+const redisClient = require('../config/redis');
+
+const LOG_CACHE_KEY = 'logs';
 
 exports.createLog = async (req, res) => {
     const { sourceIP, destinationIP, protocol, action, message } = req.body;
@@ -9,6 +12,9 @@ exports.createLog = async (req, res) => {
 
         const io = req.app.get('io');
         io.emit('newLog', newLog);  // Emit new log to all connected clients
+
+        // Invalidate the cache
+        redisClient.del(LOG_CACHE_KEY);
 
         res.status(201).json(newLog);
     } catch (err) {
