@@ -48,6 +48,7 @@ connectDB();
 // Routes
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/logs', require('./src/routes/logs'));
+app.use('/api/alerts', require('./src/routes/alerts'));
 app.use('/api/detection', require('./src/routes/detection'));
 
 // Error handling middleware

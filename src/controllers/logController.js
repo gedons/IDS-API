@@ -46,21 +46,8 @@ exports.createLog = async (req, res) => {
 // Function to get all logs, with caching
 exports.getLogs = async (req, res) => {
     try {
-        redisClient.get(LOG_CACHE_KEY, async (err, logs) => {
-            if (err) {
-                console.error(err);
-                res.status(500).json({ message: 'Server error' });
-                return;
-            }
-
-            if (logs) {
-                res.status(200).json(JSON.parse(logs));
-            } else {
-                const logsFromDB = await Log.find({ user: req.user.id });
-                redisClient.setex(LOG_CACHE_KEY, 3600, JSON.stringify(logsFromDB)); // Cache for 1 hour
-                res.status(200).json(logsFromDB);
-            }
-        });
+        const logs = await Log.find();
+        res.status(200).json(logs);
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ message: 'Server error' });
