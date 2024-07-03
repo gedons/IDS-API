@@ -1,82 +1,49 @@
 const Log = require('../models/Log');
-const Signature = require('../models/Signature');
 const Alert = require('../models/Alert');
 const redisClient = require('../config/redis');
 
 const LOG_CACHE_KEY = 'logs';
 
+// Function to create a new log entry
 exports.createLog = async (req, res) => {
-    const { sourceIP, destinationIP, protocol, action, message, detectionType } = req.body;
+    const { sourceIP, destinationIP, protocol, action, message } = req.body;
 
     try {
-        const newLog = new Log({ sourceIP, destinationIP, protocol, action, message });
+        const newLog = new Log({
+            user: req.user.id,
+            sourceIP,
+            destinationIP,
+            protocol,
+            action,
+            message
+        });
         await newLog.save();
 
+        // Emit new log to all connected clients
         const io = req.app.get('io');
-        io.emit('newLog', newLog);  // Emit new log to all connected clients
+        io.emit('newLog', newLog);
 
         // Invalidate the cache
         redisClient.del(LOG_CACHE_KEY);
 
-        // Perform threat detection based on detectionType
-        if (detectionType === 'signature') {
-            await performSignatureBasedDetection(newLog);
-        } else if (detectionType === 'anomaly') {
-            await performAnomalyDetection(newLog);
-        }
+        // Check for anomalies and generate alerts if any
+        const anomalies = await detectAnomalies([newLog]);
+        console.log('Anomalies detected:', anomalies);
 
-        res.status(201).json(newLog);
+        if (anomalies.length > 0) {
+            const alerts = await generateAlerts(anomalies, newLog, req.user.id, io);
+            console.log('Alerts generated:', alerts);
+            res.status(201).json({ log: newLog, alerts });
+        } else {
+            res.status(201).json(newLog);
+        }
     } catch (err) {
-        console.error(err.message);
+        console.error('Error creating log:', err.message);
         res.status(500).json({ message: 'Server error' });
     }
 };
 
-const performSignatureBasedDetection = async (log) => {
-    try {
-        const signatures = await Signature.find();
-        for (const signature of signatures) {
-            const regex = new RegExp(signature.pattern, 'i');
-            if (regex.test(log.message)) {
-                const alert = new Alert({
-                    type: 'signature',
-                    message: `Signature match found: ${signature.description}`,
-                    log: log._id
-                });
-                await alert.save();
-                console.log(`Alert generated: ${alert.message}`);
-            }
-        }
-    } catch (err) {
-        console.error('Error in signature-based detection:', err.message);
-    }
-};
-
-const performAnomalyDetection = async (log) => {
-    try {
-        const logs = await Log.find();
-        const threshold = 1.5; // Example threshold for z-score
-
-        const mean = logs.reduce((acc, log) => acc + log.message.length, 0) / logs.length;
-        const variance = logs.reduce((acc, log) => acc + Math.pow(log.message.length - mean, 2), 0) / logs.length;
-        const standardDeviation = Math.sqrt(variance);
-
-        const zScore = (log.message.length - mean) / standardDeviation;
-
-        if (Math.abs(zScore) > threshold) {
-            const alert = new Alert({
-                type: 'anomaly',
-                message: `Anomaly detected with z-score: ${zScore.toFixed(2)}`,
-                log: log._id
-            });
-            await alert.save();
-            console.log(`Alert generated: ${alert.message}`);
-        }
-    } catch (err) {
-        console.error('Error in anomaly detection:', err.message);
-    }
-};
-
+// Function to get all logs, with caching
 exports.getLogs = async (req, res) => {
     try {
         redisClient.get(LOG_CACHE_KEY, async (err, logs) => {
@@ -89,8 +56,8 @@ exports.getLogs = async (req, res) => {
             if (logs) {
                 res.status(200).json(JSON.parse(logs));
             } else {
-                const logsFromDB = await Log.find();
-                redisClient.setex(LOG_CACHE_KEY, 3600, JSON.stringify(logsFromDB));
+                const logsFromDB = await Log.find({ user: req.user.id });
+                redisClient.setex(LOG_CACHE_KEY, 3600, JSON.stringify(logsFromDB)); // Cache for 1 hour
                 res.status(200).json(logsFromDB);
             }
         });
@@ -100,3 +67,54 @@ exports.getLogs = async (req, res) => {
     }
 };
 
+// Advanced anomaly detection function
+const detectAnomalies = async (logs) => {
+    const anomalies = [];
+    const recentLogs = await Log.find().sort({ timestamp: -1 }).limit(100); // Fetch recent logs for context
+
+    logs.forEach(log => {
+        // Example advanced anomaly detection logic
+        const similarLogs = recentLogs.filter(
+            recentLog => recentLog.sourceIP === log.sourceIP && recentLog.protocol === log.protocol
+        );
+
+        const denyCount = similarLogs.filter(recentLog => recentLog.action === 'DENY').length;
+        const allowCount = similarLogs.filter(recentLog => recentLog.action === 'ALLOW').length;
+
+        // Rule-based detection
+        if (denyCount > allowCount) {
+            anomalies.push(log);
+        }
+
+        // Statistical threshold detection
+        if (denyCount / similarLogs.length > 0.5) {
+            anomalies.push(log);
+        }
+    });
+
+    return anomalies;
+};
+
+// Function to generate alerts and save them in MongoDB
+const generateAlerts = async (anomalies, log, userId, io) => {
+    const alerts = [];
+    for (const anomaly of anomalies) {
+        const alert = new Alert({
+            user: userId,
+            log: log._id,
+            sourceIP: anomaly.sourceIP,
+            destinationIP: anomaly.destinationIP,
+            protocol: anomaly.protocol,
+            action: anomaly.action,
+            message: 'Anomaly detected: ' + anomaly.message,
+            severity: 'High',
+            type: 'Anomaly'
+        });
+        await alert.save();
+        alerts.push(alert);
+
+        // Emit alert via WebSocket
+        io.emit('newAlert', alert);
+    }
+    return alerts;
+};

@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { createLog, getLogs } = require('../controllers/logController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const logController = require('../controllers/logController');
+const passport = require('passport');
 
-router.post('/create', authMiddleware, createLog);
-router.get('/', authMiddleware, getLogs);
+// Route to create a new log
+router.post('/', passport.authenticate('jwt', { session: false }), logController.createLog);
+
+// Route to get all logs
+router.get('/', passport.authenticate('jwt', { session: false }), logController.getLogs);
 
 module.exports = router;
