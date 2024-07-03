@@ -1,6 +1,7 @@
 const Log = require('../models/Log');
 const Alert = require('../models/Alert');
 const redisClient = require('../config/redis');
+const ibmXForceService = require('../services/ibmXForceService');
 
 const LOG_CACHE_KEY = 'logs';
 
@@ -27,7 +28,7 @@ exports.createLog = async (req, res) => {
         redisClient.del(LOG_CACHE_KEY);
 
         // Check for anomalies and generate alerts if any
-        const anomalies = await detectAnomalies([newLog]);
+        const anomalies = await detectAnomalies([newLog], req.user.id);
         console.log('Anomalies detected:', anomalies);
 
         if (anomalies.length > 0) {
@@ -54,12 +55,13 @@ exports.getLogs = async (req, res) => {
     }
 };
 
-// Advanced anomaly detection function
-const detectAnomalies = async (logs) => {
-    const anomalies = [];
-    const recentLogs = await Log.find().sort({ timestamp: -1 }).limit(100); // Fetch recent logs for context
 
-    logs.forEach(log => {
+// Advanced anomaly detection function
+const detectAnomalies = async (logs, userId) => {
+    const anomalies = [];
+    const recentLogs = await Log.find({ user: userId }).sort({ timestamp: -1 }).limit(100); // Fetch recent logs for context
+
+    for (const log of logs) {
         // Example advanced anomaly detection logic
         const similarLogs = recentLogs.filter(
             recentLog => recentLog.sourceIP === log.sourceIP && recentLog.protocol === log.protocol
@@ -68,16 +70,20 @@ const detectAnomalies = async (logs) => {
         const denyCount = similarLogs.filter(recentLog => recentLog.action === 'DENY').length;
         const allowCount = similarLogs.filter(recentLog => recentLog.action === 'ALLOW').length;
 
+        // Query IBM X-Force for threat intelligence
+        const threatData = await ibmXForceService.queryIP(log.sourceIP);
+        const threatScore = threatData ? threatData.score : 0;
+
         // Rule-based detection
-        if (denyCount > allowCount) {
+        if (denyCount > allowCount || threatScore > 5) {
             anomalies.push(log);
         }
 
         // Statistical threshold detection
-        if (denyCount / similarLogs.length > 0.5) {
+        if (denyCount / similarLogs.length > 0.5 || threatScore > 5) {
             anomalies.push(log);
         }
-    });
+    }
 
     return anomalies;
 };
