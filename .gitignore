@@ -3,4 +3,4 @@ dist
 .env
 docker-compose.yml
 logs
-package.json
+package-lock.json
