@@ -44,13 +44,45 @@ exports.createLog = async (req, res) => {
 // Function to get all logs, with caching
 exports.getLogs = async (req, res) => {
     try {
-        const logs = await Log.find();
+        const logs = await Log.find({ user: req.user.id });
         res.status(200).json(logs);
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ message: 'Server error' });
     }
 };
+
+// Delete a log by ID, along with associated alerts and IBM responses
+exports.deleteLog = async (req, res) => {
+    try {
+        const logId = req.params.id;
+        if (!logId) {
+            return res.status(400).json({ message: 'Log ID is required' });
+        }
+
+        const log = await Log.findById(logId);
+        if (!log) {
+            return res.status(404).json({ message: 'Log not found' });
+        }
+
+        // Delete the log
+        await Log.deleteOne({ _id: logId });
+
+        // Delete associated alerts
+        await Alert.deleteMany({ log: logId });
+
+        // Delete associated IBM responses
+        await IBMResponse.deleteMany({ log: logId });
+
+        res.status(200).json({ message: 'Log and associated data deleted successfully' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+
+
 
 const detectAnomalies = async (logs, userId) => {
     const anomalies = [];

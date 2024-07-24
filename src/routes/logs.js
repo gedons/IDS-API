@@ -9,4 +9,6 @@ router.post('/', passport.authenticate('jwt', { session: false }), logController
 // Route to get all logs
 router.get('/', passport.authenticate('jwt', { session: false }), logController.getLogs);
 
+router.delete('/:id', passport.authenticate('jwt', { session: false }), logController.deleteLog);
+
 module.exports = router;
