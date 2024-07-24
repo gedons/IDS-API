@@ -3,6 +3,7 @@ const express = require('express');
 const helmet = require('helmet');
 const { createLogger, transports, format } = require('winston');
 const connectDB = require('./src/config/db');
+const cors = require("cors");
 const bodyParser = require('body-parser');
 const passport = require('passport');
 const http = require('http');
@@ -16,6 +17,7 @@ const app = express();
 
 // Middleware
 app.use(bodyParser.json());
+app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Logger setup
@@ -50,6 +52,7 @@ app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/logs', require('./src/routes/logs'));
 app.use('/api/alerts', require('./src/routes/alerts'));
 app.use('/api/detection', require('./src/routes/detection'));
+app.use('/api/ibm-responses', require('./src/routes/ibmResponseRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

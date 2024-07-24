@@ -15,16 +15,9 @@ const IBMResponseSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    score: {
-        type: Number,
+    response: {
+        type: Object,
         required: true
-    },
-    categories: {
-        type: [String],
-        required: true
-    },
-    reason: {
-        type: String
     },
     timestamp: {
         type: Date,

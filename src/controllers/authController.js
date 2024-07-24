@@ -17,7 +17,7 @@ exports.register = async (req, res) => {
         const payload = { id: user.id, role: user.role };
         const token = jwt.sign(payload, keys, { expiresIn: '1h' });
 
-        res.status(201).json({ token });
+        res.status(201).json({ token, user });
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ message: 'Server error' });
@@ -41,7 +41,7 @@ exports.login = async (req, res) => {
         const payload = { id: user.id, role: user.role };
         const token = jwt.sign(payload, keys, { expiresIn: '1h' });
 
-        res.json({ token });
+        res.json({ token, user });
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ message: 'Server error' });
