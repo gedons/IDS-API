@@ -33,6 +33,20 @@ exports.getAlertsByLogId = async (req, res) => {
     }
 };
 
+// Get a single alert by ID
+exports.getAlertById = async (req, res) => {
+    try {
+        const alert = await Alert.findById(req.params.id);
+        if (!alert) {
+            return res.status(404).json({ message: 'Alert not found' });
+        }
+        res.status(200).json(alert);
+    } catch (err) {
+        console.error('Error fetching alert:', err.message);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 // Delete an alert
 exports.deleteAlert = async (req, res) => {
     try {
