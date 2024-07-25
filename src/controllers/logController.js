@@ -10,12 +10,13 @@ exports.createLog = async (req, res) => {
     const { sourceIP, destinationIP, protocol, action, message } = req.body;
 
     try {
+        const standardizedAction = action.toUpperCase()
         const newLog = new Log({
             user: req.user.id,
             sourceIP,
             destinationIP,
             protocol,
-            action,
+            action: standardizedAction,
             message
         });
         await newLog.save();
@@ -26,6 +27,8 @@ exports.createLog = async (req, res) => {
         redisClient.del(LOG_CACHE_KEY);
 
         const anomalies = await detectAnomalies([newLog], req.user.id);
+
+        console.log('Detected anomalies:', anomalies);
 
         if (anomalies.length > 0) {
             const alerts = await generateAlerts(anomalies, newLog, req.user.id, io);
@@ -81,33 +84,43 @@ exports.deleteLog = async (req, res) => {
     }
 };
 
-
-
-
 const detectAnomalies = async (logs, userId) => {
     const anomalies = [];
     const recentLogs = await Log.find({ user: userId }).sort({ timestamp: -1 }).limit(100);
+
+    console.log('Recent logs:', recentLogs);
 
     for (const log of logs) {
         const similarLogs = recentLogs.filter(
             recentLog => recentLog.sourceIP === log.sourceIP && recentLog.protocol === log.protocol
         );
 
-        const denyCount = similarLogs.filter(recentLog => recentLog.action === 'DENY').length;
-        const allowCount = similarLogs.filter(recentLog => recentLog.action === 'ALLOW').length;
+        console.log(`Similar logs for log ${log._id}:`, similarLogs);
+
+        const denyOrBlockCount = similarLogs.filter(recentLog => {
+            const action = recentLog.action.toUpperCase();
+            return action === 'DENY' || action === 'BLOCK';
+        }).length;
+
+        const allowCount = similarLogs.filter(recentLog => recentLog.action.toUpperCase() === 'ALLOW').length;
+
+        console.log(`Deny/Block count: ${denyOrBlockCount}, Allow count: ${allowCount}`);
 
         const threatData = await ibmXForceService.queryIP(log.sourceIP);
         const threatScore = threatData ? threatData.score : 0;
 
-        if (denyCount > allowCount || threatScore > 5) {
+        console.log(`Threat score for IP ${log.sourceIP}: ${threatScore}`);
+
+        if (denyOrBlockCount > allowCount || threatScore > 5) {
             anomalies.push(log);
         }
 
-        if (denyCount / similarLogs.length > 0.5 || threatScore > 5) {
+        if (denyOrBlockCount / similarLogs.length > 0.5 || threatScore > 5) {
             anomalies.push(log);
         }
     }
 
+    console.log('Anomalies detected:', anomalies);
     return anomalies;
 };
 

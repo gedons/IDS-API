@@ -16,7 +16,7 @@ const queryIP = async (ip, logId, userId) => {
                 'Authorization': authHeader
             }
         });
-        console.log(`Response from IBM X-Force for IP ${ip}:`, response.data);
+        // console.log(`Response from IBM X-Force for IP ${ip}:`, response.data);
 
         // Save response to the database
         const newIBMResponse = new IBMResponse({
@@ -31,7 +31,7 @@ const queryIP = async (ip, logId, userId) => {
     } catch (error) {
         console.error(`Error querying IBM X-Force for IP ${ip}:`, error.message);
         if (error.response) {
-            console.error('Error response data:', error.response.data); // Log the response data for more details
+            console.error('Error response data:', error.response.data); 
         }
         return null;
     }

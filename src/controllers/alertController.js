@@ -13,6 +13,26 @@ exports.getUserAlerts = async (req, res) => {
     }
 };
 
+// Fetch alerts for a specific log
+exports.getAlertsByLogId = async (req, res) => {
+    try {
+        const logId = req.params.logId; // Extract log ID from the route parameters
+        const userId = req.user.id; 
+        
+        // Find alerts related to the specific log ID for the current user
+        const alerts = await Alert.find({ log: logId, user: userId }); 
+        
+        if (alerts.length === 0) {
+            return res.status(404).json({ message: 'No alerts found for this log' });
+        }
+
+        res.status(200).json(alerts);
+    } catch (err) {
+        console.error('Error fetching alerts by log ID:', err.message);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 // Delete an alert
 exports.deleteAlert = async (req, res) => {
     try {
