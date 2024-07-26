@@ -53,6 +53,7 @@ app.use('/api/logs', require('./src/routes/logs'));
 app.use('/api/alerts', require('./src/routes/alerts'));
 app.use('/api/detection', require('./src/routes/detection'));
 app.use('/api/ibm-responses', require('./src/routes/ibmResponseRoutes'));
+app.use('/api/monitoring', require('./src/routes/monitoringRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

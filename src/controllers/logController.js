@@ -55,6 +55,44 @@ exports.getLogs = async (req, res) => {
     }
 };
 
+// Get historical data with enhanced analysis
+exports.getHistoricalData = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        // Fetch logs within the specified date range
+        const logs = await Log.find({
+            timestamp: { $gte: new Date(startDate), $lte: new Date(endDate) }
+        }).exec();
+
+        // Analyze data (e.g., count occurrences of different actions)
+        const actionCounts = logs.reduce((counts, log) => {
+            counts[log.action] = (counts[log.action] || 0) + 1;
+            return counts;
+        }, {});
+
+        // Trend analysis by day
+        const trendData = logs.reduce((acc, log) => {
+            const date = log.timestamp.toISOString().split('T')[0]; 
+            acc[date] = (acc[date] || 0) + 1;
+            return acc;
+        }, {});
+
+        // Prepare aggregated data for visualization
+        const aggregatedData = {
+            actionCounts,
+            trendData,
+            totalLogs: logs.length,
+            averageActionsPerDay: logs.length / (new Date(endDate) - new Date(startDate)) * 1000 * 60 * 60 * 24  
+        };
+
+        res.json(aggregatedData);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching historical data', error });
+    }
+};
+
+
 // Delete a log by ID, along with associated alerts and IBM responses
 exports.deleteLog = async (req, res) => {
     try {
