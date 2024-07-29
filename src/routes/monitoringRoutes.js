@@ -5,6 +5,6 @@ const monitoringController = require('../controllers/monitoringController');
 const passport = require('passport');
 
 // Route to get real-time data
-router.get('/real-time-data', passport.authenticate('jwt', { session: false }), monitoringController.getRealTimeData);
+router.get('/real-time-data', monitoringController.getRealTimeData);
 
 module.exports = router;
