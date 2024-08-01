@@ -4,7 +4,7 @@ const Log = require('../models/Log');
 // Get all IBM responses with their associated logs
 exports.getAllIBMResponses = async (req, res) => {
     try {
-        const ibmResponses = await IBMResponse.find({ user: req.user.id }).populate('log');
+        const ibmResponses = await IBMResponse.find({ user: req.user.id }).populate('log').sort({ createdAt: -1 });
         res.status(200).json(ibmResponses);
     } catch (err) {
         console.error('Error getting IBM responses:', err.message);

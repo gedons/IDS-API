@@ -5,7 +5,7 @@ const Alert = require('../models/Alert');
 exports.getUserAlerts = async (req, res) => {
     try {
         const userId = req.user.id; 
-        const alerts = await Alert.find({ user: userId }).populate('log'); 
+        const alerts = await Alert.find({ user: userId }).populate('log').sort({ createdAt: -1 }); 
         res.status(200).json(alerts);
     } catch (err) {
         console.error('Error fetching user alerts:', err.message);

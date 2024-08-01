@@ -47,7 +47,7 @@ exports.createLog = async (req, res) => {
 // Function to get all logs, with caching
 exports.getLogs = async (req, res) => {
     try {
-        const logs = await Log.find({ user: req.user.id });
+        const logs = await Log.find({ user: req.user.id }).sort({ createdAt: -1 });
         res.status(200).json(logs);
     } catch (err) {
         console.error(err.message);
