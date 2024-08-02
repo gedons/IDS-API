@@ -1,7 +1,7 @@
 const axios = require('axios');
 const IBMResponse = require('../models/IBMResponse');
-const API_KEY = '262e42d6-8f5f-424b-897e-28f11c96600f';
-const API_PASSWORD = 'f51ea424-314b-424e-bf2f-34aec54f350e';
+const API_KEY = 'fbc82f3e-6537-4e1f-8d24-6f924db8f806';
+const API_PASSWORD = '8683a061-fdac-474b-aa3e-b77c826b336a';
 const BASE_URL = 'https://api.xforce.ibmcloud.com';
 
 
